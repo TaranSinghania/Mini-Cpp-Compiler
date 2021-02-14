@@ -36,6 +36,7 @@ extern int find(int  scope, char *yytext);
 extern void update(char* name, int value, int scope);
 extern int insert(int* idx, int scope, char* dtype, char* val, int line_num);
 extern void decrScope();
+extern void incrScope();
 extern char tdType[50];
 
 
@@ -204,6 +205,17 @@ ASSIGN_EXPR: T_ID ASSIGNOP T_ID T_Terminator {
         }
         int idx1 = find(scope, $1);
         int val1 = symTable[idx1].value;
+        int scope1 = symTable[idx1].scope;
+        char dtype1[50];
+        strcpy(dtype1,symTable[idx1].dtype);
+        printf("scope=%d\nscope1=%d\n",scope,scope1);
+
+        if(scope != scope1){
+            if(!insert(&count, scope, dtype1, $1, yylineno)){
+                yyerror("Variable redeclared");
+            }
+            update($1, atoi($3), scope);
+        }
 
         if(strcmp($2, "=")){
             update($1, atoi($3), scope);
@@ -320,13 +332,13 @@ F: T_ID {
 | UNARYEXP
 ;
 
-FORSTMT: T_FOR T_OB INITFOR COND T_Terminator ITRCHANGE T_CB T_OFB STMT T_CFB
+FORSTMT: T_FOR T_OB INITFOR COND T_Terminator ITRCHANGE T_CB T_OFB STMT T_CFB 
 ;
 
-INITFOR: T_ID T_Terminator
-|ASSIGN_EXPR
-|DECL
-|T_Terminator
+INITFOR: T_ID T_Terminator { scope--; }
+|ASSIGN_EXPR { scope--; }
+|DECL { scope--; }
+|T_Terminator { scope--; }
 ;
 
 COND: OPERATION

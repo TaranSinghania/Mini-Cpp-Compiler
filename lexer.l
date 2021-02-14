@@ -68,7 +68,7 @@ letter [a-zA-Z]
 
 "if"	{ printf("%d|\tKEYWORD - IF \n",yylineno); return T_IF; }
 "else" { printf("%d|\tKEYWORD - ELSE \n",yylineno); return T_ELSE; }
-"for" { printf("%d|\tKEYWORD - FOR \n",yylineno); return T_FOR; }
+"for" {scope++; printf("%d|\tKEYWORD - FOR \n",yylineno); return T_FOR; }
 "return" { printf("%d|\tKEYWORD - RETURN \n",yylineno); return T_RETURN; }
 "endl" { printf("%d|\tKEYWORD - ENDL \n",yylineno); return T_ENDL; }
 "cin" { printf("%d|\tKEYWORD - CIN \n",yylineno); return T_IN; }
@@ -117,7 +117,7 @@ letter [a-zA-Z]
 "<<" { printf("%d|\tSTREAM OPERATOR - %s\n",yylineno, yytext); return T_STROUT; }
 
 "{}" { printf("%d|\tCURLY BRACES - %s\n", yylineno, yytext); return T_CB; }
-"{"  { scope++; printf("%d|\tOPEN CURLY BRACES - %s\n", yylineno, yytext);return T_OFB; }
+"{"  { scope++; printf("%d|\tOPEN CURLY BRACES - %s\n", yylineno, yytext); return T_OFB; }
 "}"  { scope--; printf("%d|\tCLOSE CURLY BRACES - %s\n", yylineno, yytext); return T_CFB; }
 
 "[" { printf("%d|\tOPEN SQAURE BRACES - %s\n", yylineno, yytext); return T_OSB; }
