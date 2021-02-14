@@ -5,5 +5,6 @@ To run:<br/>
 ```make```<br/>
 ```./a.out < sample_program.cppp```
 
-To remove generated files:
+
+To remove generated files:<br/>
 ```make clean```
