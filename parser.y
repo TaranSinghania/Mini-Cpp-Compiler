@@ -29,7 +29,6 @@ extern int SymTable[100];
 
 
 extern int scope;
-extern int dflag;
 extern int count;
 extern void displaySymTable();
 extern int find(int  scope, char *yytext);
@@ -90,13 +89,13 @@ FUNC: TYPE T_ID T_OB PARAMLIST T_CB T_OFB STMT T_CFB { scope++;}
 ;
 
 PARAMLIST: TYPE T_ID PARAMLIST{ 
-    dflag = 1;
+    
     if(!insert(&count, scope + 1, $1, $2, yylineno)){
         yyerror("Variable redeclared");
     }
 }
 | TYPE T_ID T_EQ E PARAMLIST{
-    dflag = 1; 
+     
     if(!insert(&count, scope + 1, $1, $2, yylineno)){
         yyerror("Variable redeclared");
     }
@@ -104,14 +103,14 @@ PARAMLIST: TYPE T_ID PARAMLIST{
 }
 | T_COMMA T_ID T_EQ E PARAMLIST
 {
-    dflag = 1;
+    
     if(!insert(&count, scope + 1, tdType, $2, yylineno)){
         yyerror("Variable redeclared");
     }
     update($2, atoi($4), scope);
 }
 | T_COMMA TYPE T_ID PARAMLIST{
-    dflag = 1;
+    
     if(!insert(&count, scope+1, $2, $3, yylineno)){
         yyerror("Variable redeclared");
     }
@@ -135,14 +134,14 @@ TYPE: T_INT {strcpy(tdType,$1);}
 ;
 
 DECL: TYPE T_ID T_EQ E VARLIST T_Terminator {
-    dflag = 1;
+    
     if(!insert(&count, scope, $1, $2, yylineno)){
         yyerror("Variable redeclared");
     }
     update($2, atoi($4), scope);
 }
 | TYPE T_ID VARLIST T_Terminator {
-    dflag = 1;
+    
     if(!insert(&count, scope, $1, $2, yylineno)){
         yyerror("Variable redeclared");
     }

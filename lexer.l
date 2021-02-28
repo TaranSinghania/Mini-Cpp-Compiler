@@ -20,8 +20,6 @@ typedef struct table{
 }table;
 int count = 0;
 node symTable[1000];
-int flag = 0;
-int dflag = 0;
 char tdType[50];
 int insert(int* idx, int scope, char* dtype, char* val, int line_num);
 void displaySymTable();
@@ -49,12 +47,12 @@ letter [a-zA-Z]
 "int main()" { printf("%d|\tMAIN FUNCTION - int main() \n",yylineno); return T_MAIN; }
 "void main()" { printf("%d|\tMAIN FUNCTION - void main() \n", yylineno); return T_VMAIN; }
 
-"int" { strcpy(tdType, yytext); printf("%d|\tKEYWORD - INT\n", yylineno); dflag = 1; yylval = strdup(yytext); return T_INT; }
-"float" { strcpy(tdType, yytext); printf("%d|\tKEYWORD - FLOAT\n", yylineno); dflag = 1; yylval = strdup(yytext); return T_FLOAT; }
-"double" { strcpy(tdType, yytext); printf("%d|\tKEYWORD - DOUBLE\n", yylineno); dflag = 1; yylval = strdup(yytext); return T_DOUBLE; }
-"char" { strcpy(tdType, yytext); printf("%d|\tKEYWORD - CHAR\n", yylineno); dflag = 1; yylval = strdup(yytext); return T_CHAR;}
-"string" { strcpy(tdType, yytext); printf("%d|\tKEYWORD - STRING\n", yylineno); dflag = 1; yylval = strdup(yytext); return T_STR; }
-"void" { strcpy(tdType, yytext); printf("%d|\tKEYWORD - VOID\n", yylineno);  dflag = 1; yylval = strdup(yytext); return T_VOID; }
+"int" { strcpy(tdType, yytext); printf("%d|\tKEYWORD - INT\n", yylineno); yylval = strdup(yytext); return T_INT; }
+"float" { strcpy(tdType, yytext); printf("%d|\tKEYWORD - FLOAT\n", yylineno); yylval = strdup(yytext); return T_FLOAT; }
+"double" { strcpy(tdType, yytext); printf("%d|\tKEYWORD - DOUBLE\n", yylineno); yylval = strdup(yytext); return T_DOUBLE; }
+"char" { strcpy(tdType, yytext); printf("%d|\tKEYWORD - CHAR\n", yylineno); yylval = strdup(yytext); return T_CHAR;}
+"string" { strcpy(tdType, yytext); printf("%d|\tKEYWORD - STRING\n", yylineno); yylval = strdup(yytext); return T_STR; }
+"void" { strcpy(tdType, yytext); printf("%d|\tKEYWORD - VOID\n", yylineno);  yylval = strdup(yytext); return T_VOID; }
 "public:" { printf("%d|\tKEYWORD - PUBLIC\n", yylineno); yylval = strdup(yytext); return T_PUBLIC; }
 "private:" {printf("%d|\tKEYWORD - PRIVATE\n", yylineno); yylval = strdup(yytext); return T_PRIVATE; }
 "protected:" { printf("%d|\tKEYWORD - PROTECTED\n", yylineno); yylval = strdup(yytext); return T_PROTECTED; }
