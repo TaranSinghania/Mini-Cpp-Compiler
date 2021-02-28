@@ -464,7 +464,7 @@ BOOL: T_TRUE {$$ = "1";}
 
 %%
 void yyerror(const char *s) {
-    printf("%s \n",s);
+    printf("\nERROR: %s on line %d\n",s, yylineno);
 }
 int main()
 {
