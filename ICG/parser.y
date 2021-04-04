@@ -4,6 +4,18 @@
 #include <string.h>
 #define YYSTYPE char *
 int yylex();
+void if1();
+void if2();
+void if3();
+void for1();
+void for2();
+void for3();
+void for4();
+void codegen();
+void codegen_assign();
+void codegen_syns();
+void codgen_un();
+void showSt();
 void yyerror(const char *s);
 
 typedef struct quadruples{
@@ -143,15 +155,14 @@ TYPE: T_INT {strcpy(tdType,$1);}
 |T_VOID {strcpy(tdType,$1);}
 ;
 
-DECL: TYPE T_ID T_EQ E VARLIST T_Terminator {
-    
+DECL: TYPE T_ID {push($2);} T_EQ E VARLIST T_Terminator {
+    codegen_assign();
     if(!insert(&count, scope, $1, $2, yylineno)){
         yyerror("Variable redeclared");
     }
     update($2, atoi($4), scope);
 }
 | TYPE T_ID VARLIST T_Terminator {
-    
     if(!insert(&count, scope, $1, $2, yylineno)){
         yyerror("Variable redeclared");
     }
@@ -186,105 +197,8 @@ VARLIST: T_COMMA T_ID VARLIST {
 |
 ;
 
-ASSIGN_EXPR: T_ID ASSIGNOP T_ID T_Terminator {
-        if(find(scope, $1) == -1 && find(scope, $3) == -1){
-            yyerror("Variables not declared");
-        }
-        int idx1 = find(scope, $1);
-        int val1 = symTable[idx1].value;
-
-        int idx2 = find(scope, $3);
-        int val2 = symTable[idx2].value;
-
-        if(strcmp($2, "=")){
-            update($1, val2, scope);
-        }
-        else if(strcmp($2, "+=")){
-            val1 += val2;
-            update($1, val1, scope);
-        }
-        else if(strcmp($2, "-=")){
-            val1 -= val2;
-            update($1, val1, scope);
-        }
-        else if(strcmp($2, "*=")){
-            val1 *= val2;
-            update($1, val1, scope);
-        }
-        else if(strcmp($2, "/=")){
-            val1 /= val2;
-            update($1, val1, scope);
-        }
-        else if(strcmp($2, "%=")){
-            val1 %= val2;
-            update($1, val1, scope);
-        }
-        else if(strcmp($2, ">>=")){
-            val1 >>= val2;
-            update($1, val1, scope);
-        }
-        else if(strcmp($2, "<<=")){
-            val1 <<= val2;
-            update($1, val1, scope);
-        }
-        else{
-            yyerror("Invalid operation");
-        }
-      }
-| T_ID ASSIGNOP T_NUM T_Terminator {
-        if(find(scope, $1) == -1){
-            yyerror("Variable not declared");
-        }
-        int idx1 = find(scope, $1);
-        int val1 = symTable[idx1].value;
-        int scope1 = symTable[idx1].scope;
-        char dtype1[50];
-        strcpy(dtype1,symTable[idx1].dtype);
-        printf("scope=%d\nscope1=%d\n",scope,scope1);
-
-        if(scope != scope1){
-            if(!insert(&count, scope, dtype1, $1, yylineno)){
-                yyerror("Variable redeclared");
-            }
-            update($1, atoi($3), scope);
-        }
-
-        if(strcmp($2, "=")){
-            update($1, atoi($3), scope);
-        }
-        else if(strcmp($2, "+=")){
-            val1 += atoi($3);
-            update($1, val1, scope);
-        }
-        else if(strcmp($2, "-=")){
-            val1 -= atoi($3);
-            update($1, val1, scope);
-        }
-        else if(strcmp($2, "*=")){
-            val1 *= atoi($3);
-            update($1, val1, scope);
-        }
-        else if(strcmp($2, "/=")){
-            val1 /= atoi($3);
-            update($1, val1, scope);
-        }
-        else if(strcmp($2, "%=")){
-            val1 %= atoi($3);
-            update($1, val1, scope);
-        }
-        else if(strcmp($2, ">>=")){
-            val1 >>= atoi($3);
-            update($1, val1, scope);
-        }
-        else if(strcmp($2, "<<=")){
-            val1 <<= atoi($3);
-            update($1, val1, scope);
-        }
-        else{
-            yyerror("Invalid operation");
-        }
-      }
-| T_ID ASSIGNOP T_OB E T_CB T_Terminator {
+ASSIGN_EXPR: T_ID ASSIGNOP E T_Terminator {
+        codegen();
         if(find(scope, $1) == -1){
             yyerror("Variable not declared");
         }
@@ -329,10 +243,12 @@ ASSIGN_EXPR: T_ID ASSIGNOP T_ID T_Terminator {
 ;
 
 E: E T_ADD T {
+    push($2);
     int val = atoi($1) + atoi($3);
     sprintf($$, "%d", val);
 }
 |E T_SUB T {
+    push($2);
     int val = atoi($1) - atoi($3);
     sprintf($$, "%d", val);
 }
@@ -340,10 +256,12 @@ E: E T_ADD T {
 ;
 
 T: T T_MUL F {
+    push($2);
     int val = atoi($1) * atoi($3);
     sprintf($$, "%d", val);
 }
 |T T_DIV F {
+    push($2);
     int val = atoi($1) / atoi($3);
     sprintf($$, "%d", val);
 }
@@ -356,8 +274,9 @@ F: T_ID {
         int idx = find(scope, $1);
         sprintf($$, "%d", symTable[idx].value);
         push($1);
+        showSt();
       }
-|T_NUM {$$ = $1; push($1);}
+|T_NUM {$$ = $1;push($1);showSt();}
 | T_OB E T_CB {$$ = $2;}
 | BOOL {
         $$ = $1; push($1);
@@ -365,13 +284,13 @@ F: T_ID {
 | UNARYEXP
 ;
 
-FORSTMT: T_FOR T_OB INITFOR {for1();} COND T_Terminator {for2();} ITRCHANGE {for3();} T_CB T_OFB STMT T_CFB {for4();} 
+FORSTMT: T_FOR T_OB INITFOR {for1();} COND T_Terminator {for2();} ITRCHANGE {for3();} T_CB T_OFB STMT T_CFB {for4(); scope--;} 
 ;
 
-INITFOR: T_ID T_Terminator { scope--; }
-|ASSIGN_EXPR { scope--; }
-|DECL { scope--; }
-|T_Terminator { scope--; }
+INITFOR: T_ID T_Terminator
+|ASSIGN_EXPR
+|DECL
+|T_Terminator
 ;
 
 COND: OPERATION
@@ -393,8 +312,11 @@ ITRCHANGE: UNARYEXP
 |
 ;
 
-SELECTSTMT: T_IF T_OB COND T_CB {if1();} T_OFB STMT T_CFB {if2();}
-|T_IF T_OB COND T_CB {if1();} T_OFB STMT T_CFB {if2();} T_ELSE T_OFB STMT T_CFB {if3();}
+SELECTSTMT: T_IF T_OB COND T_CB {if1();} T_OFB STMT T_CFB {if2();} ELSEBODY {if3();}
+;
+
+ELSEBODY: T_ELSE T_OFB STMT T_CFB
+|
 ;
 
 JUMPSTMT: T_RETURN T_ID T_Terminator
@@ -554,17 +476,18 @@ void codegen_syns(){
 
 
 void codegen_assign(){
-  printf("%s = %s\n", st[top-1], st[top-2]);
+  printf("%s = %s\n", st[top-2], st[top-1]);
   top = top - 2;
 }
 
 void showSt(){
   printf("\nprinting the stack contents\n");
-  while(top != -1){
-    printf("%s ", st[top]);
-    top--;
+  int temp = top;
+  while(temp != -1){
+    printf("%s ", st[temp--]);
+
   }
-  printf("\nstack over\n");
+  printf("\nstack over \n---------------------------\n");
 }
 
 //for
