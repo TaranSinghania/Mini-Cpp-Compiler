@@ -30,6 +30,8 @@ void decrScope();
 
 int scope = 0;
 char tdType[50];
+char op[50];
+
 
 %}
 
@@ -79,40 +81,40 @@ letter [a-zA-Z]
 [+-]?{digit}+(\.{digit}+)?(E[+-]?{digit}+)? { yylval = strdup(yytext); return T_NUM; }
 \".*\" {strcpy(tdType,yytext); return T_STRING;}
 
-"+" {  return T_ADD; }
-"-" {  return T_SUB; }
-"*" {  return T_MUL; }
-"/" {  return T_DIV; }
+"+" {  yylval = strdup(yytext); return T_ADD; }
+"-" {  yylval = strdup(yytext); return T_SUB; }
+"*" {  yylval = strdup(yytext); return T_MUL; }
+"/" {  yylval = strdup(yytext); return T_DIV; }
 
-"++" { return T_INC; }
-"--" { return T_DEC; }
+"++" { strcpy(op, yytext); yylval = strdup(yytext); yylval = strdup(yytext); return T_INC; }
+"--" { strcpy(op, yytext); yylval = strdup(yytext); yylval = strdup(yytext); return T_DEC; }
 
-"==" { return T_DEQ; }
-"!=" { return T_NE; }
-">" {  return T_GT; }
-"<" {  return T_LT; }
-">=" { return T_GTE; }
-"<=" { return T_LTE; }
+"==" { yylval = strdup(yytext); return T_DEQ; }
+"!=" { yylval = strdup(yytext); return T_NE; }
+">" {  yylval = strdup(yytext); return T_GT; }
+"<" {  yylval = strdup(yytext); return T_LT; }
+">=" { yylval = strdup(yytext); return T_GTE; }
+"<=" { yylval = strdup(yytext); return T_LTE; }
 
-"&&" {  return T_AND; }
-"||" {  return T_OR; }
-"!" {   return T_NOT; }
+"&&" {  yylval = strdup(yytext); return T_AND; }
+"||" {  yylval = strdup(yytext); return T_OR; }
+"!" {   yylval = strdup(yytext); return T_NOT; }
 
-"&" { return T_BAND; }
-"|" { return T_BOR; }
-"^" { return T_BXOR; }
+"&" { yylval = strdup(yytext); return T_BAND; }
+"|" { yylval = strdup(yytext); return T_BOR; }
+"^" { yylval = strdup(yytext); return T_BXOR; }
 
-"=" { return T_EQ; }
-"+=" { return T_ADDEQ; }
-"-=" { return T_SUBEQ; }
-"*=" { return T_MULEQ; }
-"/=" { return T_DIVEQ; }
-"%=" { return T_MODEQ; }
-"<<=" { return T_LSEQ; }
-">>=" { return T_RSEQ; }
+"=" { strcpy(op, yytext); yylval = strdup(yytext);  return T_EQ; }
+"+=" { strcpy(op, yytext); yylval = strdup(yytext); return T_ADDEQ; }
+"-=" { strcpy(op, yytext); yylval = strdup(yytext); return T_SUBEQ; }
+"*=" { strcpy(op, yytext); yylval = strdup(yytext); return T_MULEQ; }
+"/=" { strcpy(op, yytext); yylval = strdup(yytext); return T_DIVEQ; }
+"%=" { strcpy(op, yytext); yylval = strdup(yytext); return T_MODEQ; }
+"<<=" {strcpy(op, yytext); yylval = strdup(yytext); return T_LSEQ; }
+">>=" {strcpy(op, yytext); yylval = strdup(yytext); return T_RSEQ; }
 
-">>" { return T_STRIN; }
-"<<" { return T_STROUT; }
+">>" {yylval = strdup(yytext); return T_STRIN; }
+"<<" {yylval = strdup(yytext); return T_STROUT; }
 
 "{}" { return T_CB; }
 "{"  { scope++; return T_OFB; }
