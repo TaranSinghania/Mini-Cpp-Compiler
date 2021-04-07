@@ -16,7 +16,10 @@ void codegen_assign();
 void codegen_syns();
 void codgen_un();
 void showSt();
+void codegen_call();
+void codegen_param();
 void yyerror(const char *s);
+
 
 typedef struct quadruples{
     char* operand1;
@@ -105,10 +108,11 @@ STMT: DECL STMT
 |T_OFB STMT T_CFB STMT
 |UNARYEXP T_Terminator STMT
 | FUNC STMT
+| FUNCALL STMT
 |
 ;
 
-FUNC: TYPE T_ID T_OB PARAMLIST T_CB T_OFB STMT T_CFB { scope++;}
+FUNC: TYPE T_ID T_OB PARAMLIST T_CB T_OFB STMT T_CFB {}
 ;
 
 PARAMLIST: TYPE T_ID PARAMLIST{ 
@@ -140,6 +144,16 @@ PARAMLIST: TYPE T_ID PARAMLIST{
 }
 |
 ;
+
+FUNCALL: T_ID {push($1);} T_OB F_PARAMLIST T_CB  T_Terminator {codegen_call();}
+;
+
+F_PARAMLIST: T_COMMA T_ID { push($2); codegen_param(); } F_PARAMLIST 
+|T_ID { push($1); codegen_param(); } F_PARAMLIST
+|T_COMMA T_ID {push($2);} T_EQ E {codegen_assign(); codegen_param();} F_PARAMLIST
+|
+;
+
 
 INOUT: T_STRIN T_ID 
 |T_STROUT T_ID INOUT
@@ -256,25 +270,29 @@ ASSIGN_EXPR: T_ID {push($1);} ASSIGNOP E T_Terminator {
       }
 ;
 
-E: E T_ADD {push("+");} T {
+E: E {} T_ADD {push("+");} T {
     int val = atoi($1) + atoi($3);
     sprintf($$, "%d", val);
+    
     codegen();
 }
-|E T_SUB {push("-");} T {
+|E {} T_SUB {push("-");} T {
     int val = atoi($1) - atoi($3);
     sprintf($$, "%d", val);
+    codegen();
 }
 |T {$$ = $1;}
 ;
 
-T: T T_MUL {push("*");} F {
+T: T {} T_MUL {push("*");} F {
     int val = atoi($1) * atoi($3);
     sprintf($$, "%d", val);
+    codegen();
 }
-|T T_DIV {push("/");} F {
+|T {} T_DIV {push("/");} F {
     int val = atoi($1) / atoi($3);
     sprintf($$, "%d", val);
+    codegen();
 }
 |F {$$ = $1;}
 
@@ -432,9 +450,25 @@ int ltop = 0;
 int label[25];
 char i_[3]="00";
 char temp[2]="t";
+int paramCall = 0;
+
+
 
 void push(char* val){
     strcpy(st[top++], val);
+}
+
+
+void codegen_call(){
+    printf("call(%s, %d)\n", st[top-1], paramCall);
+    paramCall = 0;
+    top-=1;
+}
+
+void codegen_param(){
+    printf("param %s\n", st[top-1]);
+    top-=1;
+    paramCall += 1;
 }
 
 void codegen()
@@ -442,7 +476,18 @@ void codegen()
 	strcpy(temp,"t");
 	strcat(temp,i_);
 	printf("%s = %s %s %s\n",temp,st[top-3],st[top-2],st[top-1]);
-	top-=2;
+    
+    q[len_quad].operator = (char*)malloc(sizeof(char)*strlen(st[top-2]));
+    q[len_quad].operand1 = (char*)malloc(sizeof(char)*strlen(st[top-3]));
+    q[len_quad].operand2 = (char*)malloc(sizeof(char)*strlen(st[top-1]));
+    q[len_quad].result = (char*)malloc(sizeof(char)*strlen(temp));
+    strcpy(q[len_quad].operator, st[top-2]);
+    strcpy(q[len_quad].operand1, st[top-3]);
+    strcpy(q[len_quad].operand2, st[top-1]);
+    strcpy(q[len_quad].result, temp);
+    len_quad++;
+	
+    top-=2;
 	strcpy(st[top-1],temp);
 	if(i_[1]!='9')
 		i_[1]++;
@@ -461,13 +506,49 @@ void codgen_un()
     if((!strcmp(st[top - 2],"++")) || (!strcmp(st[top - 2],"--"))){
     printf(" %s = %s %c %d\n", temp, st[top-1], st[top-2][0], 1);
 
+    q[len_quad].operator = (char*)malloc(sizeof(char)*strlen(st[top-2][0]));
+    q[len_quad].operand1 = (char*)malloc(sizeof(char)*strlen(st[top-1]));
+    q[len_quad].operand2 = (char*)malloc(sizeof(char));
+    q[len_quad].result = (char*)malloc(sizeof(char)*strlen(temp));
+    strcpy(q[len_quad].operator, st[top-2][0]);
+    strcpy(q[len_quad].operand1, st[top-1]);
+    strcpy(q[len_quad].operand2, "1");
+    strcpy(q[len_quad].result, temp);
+    len_quad++;
+
     printf("%s = %s\n", st[top - 1], temp);
+    q[len_quad].operator = (char*)malloc(sizeof(char));
+    q[len_quad].operand1 = (char*)malloc(sizeof(char)*strlen(temp));
+    q[len_quad].operand2 = NULL;
+    q[len_quad].result = (char*)malloc(sizeof(char)*strlen(st[top-1]));
+    strcpy(q[len_quad].operator, "=");
+    strcpy(q[len_quad].operand1, temp);
+    strcpy(q[len_quad].result, st[top-1]);
+    len_quad++;
 
     }
     else if((!strcmp(st[top - 1],"++")) || (!strcmp(st[top - 1],"--"))){
     printf(" %s = %s %c %d\n", temp, st[top-2], st[top-1][0], 1);
 
+    q[len_quad].operator = (char*)malloc(sizeof(char)*strlen(st[top-1][0]));
+    q[len_quad].operand1 = (char*)malloc(sizeof(char)*strlen(st[top-2]));
+    q[len_quad].operand2 = (char*)malloc(sizeof(char));
+    q[len_quad].result = (char*)malloc(sizeof(char)*strlen(temp));
+    strcpy(q[len_quad].operator, st[top-1][0]);
+    strcpy(q[len_quad].operand1, st[top-2]);
+    strcpy(q[len_quad].operand2, "1");
+    strcpy(q[len_quad].result, temp);
+    len_quad++;
+
     printf("%s = %s\n", st[top - 2], temp);
+    q[len_quad].operator = (char*)malloc(sizeof(char));
+    q[len_quad].operand1 = (char*)malloc(sizeof(char)*strlen(temp));
+    q[len_quad].operand2 = NULL;
+    q[len_quad].result = (char*)malloc(sizeof(char)*strlen(st[top-2]));
+    strcpy(q[len_quad].operator, "=");
+    strcpy(q[len_quad].operand1, temp);
+    strcpy(q[len_quad].result, st[top-2]);
+    len_quad++;
 
     }
     else
@@ -486,12 +567,33 @@ void codgen_un()
 //done
 void codegen_syns(){
   printf("%s %c %s %c %s\n", st[top-3], st[top-2][1], st[top-3], st[top-2][0], st[top - 1]);
+  
+  q[len_quad].operator = (char*)malloc(sizeof(char)*strlen(st[top-2][0]));
+  q[len_quad].operand1 = (char*)malloc(sizeof(char)*strlen(st[top-3]));
+  q[len_quad].operand2 = (char*)malloc(sizeof(char)*strlen(st[top-1]));
+  q[len_quad].result = (char*)malloc(sizeof(char)*strlen(st[top-3]));
+  strcpy(q[len_quad].operator, st[top-2][0]);
+  strcpy(q[len_quad].operand1, st[top-3]);
+  strcpy(q[len_quad].operand2, st[top-1]);
+  strcpy(q[len_quad].result, st[top-3]);
+  len_quad++;
+  
   top = top - 2;
 }
 
 
 void codegen_assign(){
   printf("%s = %s\n", st[top-2], st[top-1]);
+
+  q[len_quad].operator = (char*)malloc(sizeof(char));
+  q[len_quad].operand1 = (char*)malloc(sizeof(char)*strlen(st[top-1]));
+  q[len_quad].operand2 = NULL;
+  q[len_quad].result = (char*)malloc(sizeof(char)*strlen(st[top-2]));
+  strcpy(q[len_quad].operator, "=");
+  strcpy(q[len_quad].operand1, st[top-1]);
+  strcpy(q[len_quad].result, st[top-2]);
+  len_quad++;
+
   top = top - 2;
 }
 
