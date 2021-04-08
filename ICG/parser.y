@@ -22,13 +22,48 @@ void yyerror(const char *s);
 
 
 typedef struct quadruples{
-    char* operand1;
-    char* operand2;
-    char* operator;
-    char* result;
+    char op;
+    char arg1[20];
+    char arg2[20];
+    char res[20];
+    struct quadruples *next;
 } quad;
-int len_quad = 0;
-quad q[100];
+quad *quad_head=NULL;
+quad *quad_tail=NULL;
+
+void insert_quad(char op,char *arg1,char *arg2,char *res)
+{
+    quad *new=(quad *)malloc(sizeof(quad));
+    new->op=op;
+    strcpy(new->arg1,arg1);
+    //new->arg2=NULL;
+    if(arg2!=NULL)
+        strcpy(new->arg2,arg2);
+    strcpy(new->res,res);
+    new->next=NULL;
+    if(quad_head==NULL)
+    {
+        quad_head=new;
+        quad_tail=quad_head;
+    }
+    else
+    {
+        quad_tail->next=new;
+        quad_tail=quad_tail->next;
+    }
+}
+
+void display_quad()
+{
+    quad *temp1;
+    temp1=quad_head;
+    printf("quadruple table:\n");
+    while(temp1!=NULL)
+    {
+        printf("%c\t%s\t%s\t%s\n ",temp1->op,temp1->arg1,temp1->arg2,temp1->res);
+        temp1=temp1->next;
+    }
+}
 
 
 typedef struct node{
@@ -64,6 +99,7 @@ extern void incrScope();
 extern char tdType[50];
 extern char op[50];
 char val[50];
+int val1, val2;
 
 %}
 %token T_MAIN T_INT T_FLOAT T_DOUBLE T_CHAR T_VOID T_Terminator T_INC T_DEC T_EQ T_NE T_GT T_LT T_GTE T_LTE T_AND T_OR T_NOT T_BAND T_BOR T_BXOR T_ADDEQ T_MULEQ T_DIVEQ T_MODEQ T_LSEQ T_RSEQ T_ANDEQ T_XOREQ T_OREQ T_H
@@ -74,7 +110,7 @@ char val[50];
 
 
 %%
-S: START {printf("\n\nPROGRAM IS VALID\n\n"); exit(0);}
+S: START {printf("\n\nPROGRAM IS VALID\n\n"); display_quad(); exit(0);}
 
 
 START: T_INCLUDE Prog
@@ -324,14 +360,259 @@ INITFOR: T_ID T_Terminator
 COND: OPERATION
 ;
 
-OPERATION: E LOGICOP E
-|E RELOP E 
+OPERATION: E LOGICOP E {
+    if(!strcmp($2, "&&")){
+        if($1 && $3)
+            printf("Expression evaluated to 1\n");
+        else
+            printf("Expression evaluated to 0\n");
+    }
+    else if(!strcmp($2, "||")){
+        if($1 || $3)
+            printf("Expression evaluated to 1\n");
+        else
+            printf("Expression evaluated to 0\n");
+    }
+    else{
+        yyerror("Invalid operation");
+    }
+}
+|E RELOP E  {
+    if(!strcmp($2, "==")){
+        if($1 == $3)
+            printf("Expression evaluated to 1\n");
+        else
+            printf("Expression evaluated to 0\n");
+    }
+    else if(!strcmp($2, ">=")){
+        if($1 >= $3)
+            printf("Expression evaluated to 1\n");
+        else
+            printf("Expression evaluated to 0\n");
+    }
+    else if(!strcmp($2, "<")){
+        if($1 < $3)
+            printf("Expression evaluated to 1\n");
+        else
+            printf("Expression evaluated to 0\n");
+    }
+    else if(!strcmp($2, ">")){
+        if($1 > $3)
+            printf("Expression evaluated to 1\n");
+        else
+            printf("Expression evaluated to 0\n");
+    }
+    else if(!strcmp($2, "<=")){
+        if($1 <= $3)
+            printf("Expression evaluated to 1\n");
+        else
+            printf("Expression evaluated to 0\n");
+    }
+    else if(!strcmp($2, "!=")){
+        if($1 != $3)
+            printf("Expression evaluated to 1\n");
+        else
+            printf("Expression evaluated to 0\n");
+    }
+    else{
+        yyerror("Invalid operation");
+    }
+    
+}
 |E BITOP E
-|E RELOP E LOGICOP E RELOP E
-|T_NOT T_OB E RELOP E T_CB
-|T_NOT E RELOP E
+|E RELOP E {
+    if(!strcmp($2, "==")){
+        if($1 == $3)
+            val1 = 1;
+        else
+            val1 = 0;
+    }
+    else if(!strcmp($2, ">=")){
+        if($1 >= $3)
+            val1 = 1;
+        else
+            val1 = 0;
+    }
+    else if(!strcmp($2, "<")){
+        if($1 < $3)
+            val1 = 1;
+        else
+            val1 = 0;
+    }
+    else if(!strcmp($2, ">")){
+        if($1 > $3)
+            val1 = 1;
+        else
+            val1 = 0;
+    }
+    else if(!strcmp($2, "<=")){
+        if($1 <= $3)
+            val1 = 1;
+        else
+            val1 = 0;
+    }
+    else if(!strcmp($2, "!=")){
+        if($1 != $3)
+            val1 = 1;
+        else
+            val1 = 0;
+    }
+    else{
+        yyerror("Invalid operation");
+    }
+} LOGICOP E RELOP E {
+    if(!strcmp($6, "==")){
+        if($5 == $7)
+            val2 = 1;
+        else
+            val2 = 0;
+    }
+    else if(!strcmp($6, ">=")){
+        if($5 >= $7)
+            val2 = 1;
+        else
+            val2 = 0;
+    }
+    else if(!strcmp($6, "<")){
+        if($5 < $7)
+            val2 = 1;
+        else
+            val2 = 0;
+    }
+    else if(!strcmp($6, ">")){
+        if($5 > $7)
+            val2 = 1;
+        else
+            val2 = 0;
+    }
+    else if(!strcmp($6, "<=")){
+        if($5 <= $7)
+            val2 = 1;
+        else
+            val2 = 0;
+    }
+    else if(!strcmp($6, "!=")){
+        if($5 != $7)
+            val2 = 1;
+        else
+            val2 = 0;
+    }
+    else{
+        yyerror("Invalid operation");
+    }
+
+    if(!strcmp($4, "&&")){
+        if(val1 && val2)
+            printf("Expression evaluated to 1\n");
+        else
+            printf("Expression evaluated to 0\n");
+    }
+    else if(!strcmp($4, "||")){
+        if(val1 || val2)
+            printf("Expression evaluated to 1\n");
+        else
+            printf("Expression evaluated to 0\n");
+    }
+    else{
+        yyerror("Invalid operation");
+    }
+
+}
+|T_NOT T_OB E RELOP E T_CB {
+        if(!strcmp($4, "==")){
+        if($3 == $5)
+            printf("Expression evaluated to 0\n");
+        else
+            printf("Expression evaluated to 1\n");
+    }
+    else if(!strcmp($4, ">=")){
+        if($3 >= $5)
+            printf("Expression evaluated to 0\n");
+        else
+            printf("Expression evaluated to 1\n");
+    }
+    else if(!strcmp($4, "<")){
+        if($3 < $5)
+            printf("Expression evaluated to 0\n");
+        else
+            printf("Expression evaluated to 1\n");
+    }
+    else if(!strcmp($4, ">")){
+        if($3 > $5)
+            printf("Expression evaluated to 0\n");
+        else
+            printf("Expression evaluated to 1\n");
+    }
+    else if(!strcmp($4, "<=")){
+        if($3 <= $5)
+            printf("Expression evaluated to 0\n");
+        else
+            printf("Expression evaluated to 1\n");
+    }
+    else if(!strcmp($4, "!=")){
+        if($3 != $5)
+            printf("Expression evaluated to 0\n");
+        else
+            printf("Expression evaluated to 1\n");
+    }
+    else{
+        yyerror("Invalid operation");
+    }
+}
+|T_NOT E RELOP E {
+    if(!strcmp($3, "==")){
+        if($2 == $4)
+            printf("Expression evaluated to 0\n");
+        else
+            printf("Expression evaluated to 1\n");
+    }
+    else if(!strcmp($3, ">=")){
+        if($2 >= $4)
+            printf("Expression evaluated to 0\n");
+        else
+            printf("Expression evaluated to 1\n");
+    }
+    else if(!strcmp($3, "<")){
+        if($2 < $4)
+            printf("Expression evaluated to 0\n");
+        else
+            printf("Expression evaluated to 1\n");
+    }
+    else if(!strcmp($3, ">")){
+        if($2 > $4)
+            printf("Expression evaluated to 0\n");
+        else
+            printf("Expression evaluated to 1\n");
+    }
+    else if(!strcmp($3, "<=")){
+        if($2 <= $4)
+            printf("Expression evaluated to 0\n");
+        else
+            printf("Expression evaluated to 1\n");
+    }
+    else if(!strcmp($3, "!=")){
+        if($2 != $4)
+            printf("Expression evaluated to 0\n");
+        else
+            printf("Expression evaluated to 1\n");
+    }
+    else{
+        yyerror("Invalid operation");
+    }
+}
 |T_NOT E
-|E
+    {
+    if(!$2)
+            printf("Expression evaluated to 1\n");
+        else
+            printf("Expression evaluated to 0\n");
+}
+|E {
+    if($1)
+            printf("Expression evaluated to 1\n");
+        else
+            printf("Expression evaluated to 0\n");
+}
 |
 ;
 
@@ -476,16 +757,8 @@ void codegen()
 	strcpy(temp,"t");
 	strcat(temp,i_);
 	printf("%s = %s %s %s\n",temp,st[top-3],st[top-2],st[top-1]);
-    
-    q[len_quad].operator = (char*)malloc(sizeof(char)*strlen(st[top-2]));
-    q[len_quad].operand1 = (char*)malloc(sizeof(char)*strlen(st[top-3]));
-    q[len_quad].operand2 = (char*)malloc(sizeof(char)*strlen(st[top-1]));
-    q[len_quad].result = (char*)malloc(sizeof(char)*strlen(temp));
-    strcpy(q[len_quad].operator, st[top-2]);
-    strcpy(q[len_quad].operand1, st[top-3]);
-    strcpy(q[len_quad].operand2, st[top-1]);
-    strcpy(q[len_quad].result, temp);
-    len_quad++;
+    insert_quad(st[top-2][0],st[top-3],st[top-1],temp);
+
 	
     top-=2;
 	strcpy(st[top-1],temp);
@@ -505,50 +778,18 @@ void codgen_un()
       
     if((!strcmp(st[top - 2],"++")) || (!strcmp(st[top - 2],"--"))){
     printf(" %s = %s %c %d\n", temp, st[top-1], st[top-2][0], 1);
-
-    q[len_quad].operator = (char*)malloc(sizeof(char)*strlen(st[top-2][0]));
-    q[len_quad].operand1 = (char*)malloc(sizeof(char)*strlen(st[top-1]));
-    q[len_quad].operand2 = (char*)malloc(sizeof(char));
-    q[len_quad].result = (char*)malloc(sizeof(char)*strlen(temp));
-    strcpy(q[len_quad].operator, st[top-2][0]);
-    strcpy(q[len_quad].operand1, st[top-1]);
-    strcpy(q[len_quad].operand2, "1");
-    strcpy(q[len_quad].result, temp);
-    len_quad++;
-
+    insert_quad(st[top-2][0],st[top-1],"1",temp);
+    insert_quad('=',temp,NULL,st[top-1]);
     printf("%s = %s\n", st[top - 1], temp);
-    q[len_quad].operator = (char*)malloc(sizeof(char));
-    q[len_quad].operand1 = (char*)malloc(sizeof(char)*strlen(temp));
-    q[len_quad].operand2 = NULL;
-    q[len_quad].result = (char*)malloc(sizeof(char)*strlen(st[top-1]));
-    strcpy(q[len_quad].operator, "=");
-    strcpy(q[len_quad].operand1, temp);
-    strcpy(q[len_quad].result, st[top-1]);
-    len_quad++;
+
 
     }
     else if((!strcmp(st[top - 1],"++")) || (!strcmp(st[top - 1],"--"))){
     printf(" %s = %s %c %d\n", temp, st[top-2], st[top-1][0], 1);
-
-    q[len_quad].operator = (char*)malloc(sizeof(char)*strlen(st[top-1][0]));
-    q[len_quad].operand1 = (char*)malloc(sizeof(char)*strlen(st[top-2]));
-    q[len_quad].operand2 = (char*)malloc(sizeof(char));
-    q[len_quad].result = (char*)malloc(sizeof(char)*strlen(temp));
-    strcpy(q[len_quad].operator, st[top-1][0]);
-    strcpy(q[len_quad].operand1, st[top-2]);
-    strcpy(q[len_quad].operand2, "1");
-    strcpy(q[len_quad].result, temp);
-    len_quad++;
-
+    insert_quad(st[top-1][0],st[top-2],"1",temp);
+    insert_quad('=',temp,NULL,st[top-2]);
     printf("%s = %s\n", st[top - 2], temp);
-    q[len_quad].operator = (char*)malloc(sizeof(char));
-    q[len_quad].operand1 = (char*)malloc(sizeof(char)*strlen(temp));
-    q[len_quad].operand2 = NULL;
-    q[len_quad].result = (char*)malloc(sizeof(char)*strlen(st[top-2]));
-    strcpy(q[len_quad].operator, "=");
-    strcpy(q[len_quad].operand1, temp);
-    strcpy(q[len_quad].result, st[top-2]);
-    len_quad++;
+
 
     }
     else
@@ -567,16 +808,8 @@ void codgen_un()
 //done
 void codegen_syns(){
   printf("%s %c %s %c %s\n", st[top-3], st[top-2][1], st[top-3], st[top-2][0], st[top - 1]);
-  
-  q[len_quad].operator = (char*)malloc(sizeof(char)*strlen(st[top-2][0]));
-  q[len_quad].operand1 = (char*)malloc(sizeof(char)*strlen(st[top-3]));
-  q[len_quad].operand2 = (char*)malloc(sizeof(char)*strlen(st[top-1]));
-  q[len_quad].result = (char*)malloc(sizeof(char)*strlen(st[top-3]));
-  strcpy(q[len_quad].operator, st[top-2][0]);
-  strcpy(q[len_quad].operand1, st[top-3]);
-  strcpy(q[len_quad].operand2, st[top-1]);
-  strcpy(q[len_quad].result, st[top-3]);
-  len_quad++;
+  insert_quad(st[top-2][0],st[top-3],st[top-1],st[top-3]);
+    
   
   top = top - 2;
 }
@@ -584,15 +817,8 @@ void codegen_syns(){
 
 void codegen_assign(){
   printf("%s = %s\n", st[top-2], st[top-1]);
-
-  q[len_quad].operator = (char*)malloc(sizeof(char));
-  q[len_quad].operand1 = (char*)malloc(sizeof(char)*strlen(st[top-1]));
-  q[len_quad].operand2 = NULL;
-  q[len_quad].result = (char*)malloc(sizeof(char)*strlen(st[top-2]));
-  strcpy(q[len_quad].operator, "=");
-  strcpy(q[len_quad].operand1, st[top-1]);
-  strcpy(q[len_quad].result, st[top-2]);
-  len_quad++;
+  insert_quad('=',st[top-1],NULL,st[top-2]);
+  
 
   top = top - 2;
 }
@@ -685,7 +911,16 @@ int main()
 {
     //printf("LINE\tTOKENS\n");
     yyparse();
+    
+    /*quad *current=quad_head;
+    quad *next=NULL;
+    while(current!=NULL)
+    {
+        next=current->next;
+        free(current);
+        current=next;
+    }
+    quad_head=NULL;*/
     return 0;
 
 }
-
