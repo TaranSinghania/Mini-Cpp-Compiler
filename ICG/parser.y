@@ -18,11 +18,12 @@ void codgen_un();
 void showSt();
 void codegen_call();
 void codegen_param();
+void codegen_return();
 void yyerror(const char *s);
 
 
 typedef struct quadruples{
-    char op;
+    char op[100];
     char arg1[20];
     char arg2[20];
     char res[20];
@@ -31,15 +32,17 @@ typedef struct quadruples{
 quad *quad_head=NULL;
 quad *quad_tail=NULL;
 
-void insert_quad(char op,char *arg1,char *arg2,char *res)
+void insert_quad(char *op,char *arg1,char *arg2,char *res)
 {
     quad *new=(quad *)malloc(sizeof(quad));
-    new->op=op;
-    strcpy(new->arg1,arg1);
+    strcpy(new->op,op);
+    if(arg1!=NULL)
+        strcpy(new->arg1,arg1);
     //new->arg2=NULL;
     if(arg2!=NULL)
         strcpy(new->arg2,arg2);
-    strcpy(new->res,res);
+    if(res!=NULL)
+        strcpy(new->res,res);
     new->next=NULL;
     if(quad_head==NULL)
     {
@@ -57,10 +60,11 @@ void display_quad()
 {
     quad *temp1;
     temp1=quad_head;
-    printf("quadruple table:\n");
+    printf("Quadruple table:\n");
+    printf("opeator arg1\targ2\tresult\n");
     while(temp1!=NULL)
     {
-        printf("%c\t%s\t%s\t%s\n ",temp1->op,temp1->arg1,temp1->arg2,temp1->res);
+        printf("%s\t%s\t%s\t%s\n ",temp1->op,temp1->arg1,temp1->arg2,temp1->res);
         temp1=temp1->next;
     }
 }
@@ -68,7 +72,7 @@ void display_quad()
 
 typedef struct node{
       int scope;
-      int value;
+      char value[1000];
       char name[100];
       char dtype[50];
       int line_num;
@@ -92,7 +96,7 @@ extern int scope;
 extern int count;
 extern void displaySymTable();
 extern int find(int  scope, char *yytext);
-extern void update(char* name, int value, int scope);
+extern void update(char* name, char* value, int scope);
 extern int insert(int* idx, int scope, char* dtype, char* val, int line_num);
 extern void decrScope();
 extern void incrScope();
@@ -100,6 +104,10 @@ extern char tdType[50];
 extern char op[50];
 char val[50];
 int val1, val2;
+int val1i, val2i;
+float val1f, val2f;
+char ddtype[50];
+int flag = 0;
 
 %}
 %token T_MAIN T_INT T_FLOAT T_DOUBLE T_CHAR T_VOID T_Terminator T_INC T_DEC T_EQ T_NE T_GT T_LT T_GTE T_LTE T_AND T_OR T_NOT T_BAND T_BOR T_BXOR T_ADDEQ T_MULEQ T_DIVEQ T_MODEQ T_LSEQ T_RSEQ T_ANDEQ T_XOREQ T_OREQ T_H
@@ -110,7 +118,7 @@ int val1, val2;
 
 
 %%
-S: START {printf("\n\nPROGRAM IS VALID\n\n"); display_quad(); exit(0);}
+S: START {printf("\n\nPROGRAM IS VALID\n\n"); display_quad(); displaySymTable(); exit(0);}
 
 
 START: T_INCLUDE Prog
@@ -162,7 +170,7 @@ PARAMLIST: TYPE T_ID PARAMLIST{
     if(!insert(&count, scope + 1, $1, $2, yylineno)){
         yyerror("Variable redeclared");
     }
-    update($2, atoi($4), scope + 1);
+    update($2, val, scope + 1);
 }
 | T_COMMA T_ID T_EQ E PARAMLIST
 {
@@ -170,7 +178,7 @@ PARAMLIST: TYPE T_ID PARAMLIST{
     if(!insert(&count, scope + 1, tdType, $2, yylineno)){
         yyerror("Variable redeclared");
     }
-    update($2, atoi($4), scope);
+    update($2, val, scope);
 }
 | T_COMMA TYPE T_ID PARAMLIST{
     
@@ -211,7 +219,7 @@ DECL: TYPE T_ID {push($2);} T_EQ E {codegen_assign();} VARLIST  T_Terminator {
     if(!insert(&count, scope, $1, $2, yylineno)){
         yyerror("Variable redeclared");
     }
-    update($2, atoi(val), scope);    
+    update($2, val, scope);    
 }
 | TYPE T_ID {push($2); push("0"); codegen_assign();} VARLIST T_Terminator {
     if(!insert(&count, scope, $1, $2, yylineno)){
@@ -248,7 +256,7 @@ VARLIST: T_COMMA T_ID VARLIST {
     if(!insert(&count, scope, tdType, $2, yylineno)){
         yyerror("Variable redeclared");
     }
-    update($2, atoi(val), scope);
+    update($2, val, scope);
 }
 |
 ;
@@ -259,45 +267,115 @@ ASSIGN_EXPR: T_ID {push($1);} ASSIGNOP E T_Terminator {
             yyerror("Variable not declared");
         }
         int idx1 = find(scope, $1);
-        int val1 = symTable[idx1].value;
+        char val2[100];
+        
+        char* id_type = symTable[idx1].dtype;
 
         if(!strcmp(op, "=")){
-            update($1, atoi($4), scope);
+            update($1, $4, scope);
             codegen_assign();
         }
         else if(!strcmp(op, "+=")){
-            val1 += atoi($4);
-            update($1, val1, scope);
+            if(!strcmp(id_type, "float")){
+                float val1 = atof(symTable[idx1].value);
+                if(!strcmp(ddtype, "float"))
+                    val1 += atof($4);
+                else
+                    val1 += atoi($4);
+                
+                sprintf(val2, "%f", val1);
+                update($1, val2, scope);
+            }
+            else{
+                int val1 = atoi(symTable[idx1].value);
+                val1 += atoi($4);
+                
+                sprintf(val2, "%d", val1);
+                update($1, val2, scope);
+            }
             codegen_syns();
         }
         else if(!strcmp(op, "-=")){
-            val1 -= atoi($4);
-            update($1, val1, scope);
+            if(!strcmp(id_type, "float")){
+                float val1 = atof(symTable[idx1].value);
+                if(!strcmp(ddtype, "float"))
+                    val1 -= atof($4);
+                else
+                    val1 -= atoi($4);
+                
+                sprintf(val2, "%f", val1);
+                update($1, val2, scope);
+            }
+            else{
+                int val1 = atoi(symTable[idx1].value);
+                val1 -= atoi($4);
+                
+                sprintf(val2, "%d", val1);
+                update($1, val2, scope);
+            }
+            
             codegen_syns();
         }
         else if(!strcmp(op, "*=")){
-            val1 *= atoi($4);
-            update($1, val1, scope);
+            if(!strcmp(id_type, "float")){
+                float val1 = atof(symTable[idx1].value);
+                if(!strcmp(ddtype, "float"))
+                    val1 *= atof($4);
+                else
+                    val1 *= atoi($4);
+                
+                sprintf(val2, "%f", val1);
+                update($1, val2, scope);
+            }
+            else{
+                int val1 = atoi(symTable[idx1].value);
+                val1 *= atoi($4);
+                
+                sprintf(val2, "%d", val1);
+                update($1, val2, scope);
+            }
+
             codegen_syns();
         }
         else if(!strcmp(op, "/=")){
-            val1 /= atoi($4);
-            update($1, val1, scope);
+            if(!strcmp(id_type, "float")){
+                float val1 = atof(symTable[idx1].value);
+                if(!strcmp(ddtype, "float"))
+                    val1 /= atof($4);
+                else
+                    val1 /= atoi($4);
+                
+                sprintf(val2, "%f", val1);
+                update($1, val2, scope);
+            }
+            else{
+                int val1 = atoi(symTable[idx1].value);
+                val1 /= atoi($4);
+                
+                sprintf(val2, "%d", val1);
+                update($1, val2, scope);
+            }
             codegen_syns();
         }
         else if(!strcmp(op, "%=")){
+            int val1 = atoi(symTable[idx1].value);
             val1 %= atoi($4);
-            update($1, val1, scope);
+            sprintf(val2, "%d", val1);
+            update($1, val2, scope);
             codegen_syns();
         }
         else if(!strcmp(op, ">>=")){
+            int val1 = atoi(symTable[idx1].value);
             val1 >>= atoi($4);
-            update($1, val1, scope);
+            sprintf(val2, "%d", val1);
+            update($1, val2, scope);
             codegen_syns();
         }
         else if(!strcmp(op, "<<=")){
+            int val1 = atoi(symTable[idx1].value);
             val1 <<= atoi($4);
-            update($1, val1, scope);
+            sprintf(val2, "%d", val1);
+            update($1, val2, scope);
             codegen_syns();
         }
         else{
@@ -306,28 +384,120 @@ ASSIGN_EXPR: T_ID {push($1);} ASSIGNOP E T_Terminator {
       }
 ;
 
-E: E {} T_ADD {push("+");} T {
-    int val = atoi($1) + atoi($3);
-    sprintf($$, "%d", val);
+E: E {if(!strcmp(ddtype, "float")){flag = 1; val1f = atof(val);} else{val1i = atoi(val);}} T_ADD {push("+");} T {
+    if(flag){
+        val2f = atof(val);
+        float val1 = val1f+val2f;
+        sprintf($$, "%f", val1);
+        sprintf(val, "%f", val1);
+        flag = 0;
+        strcpy(ddtype, "float");
+    }
+    else{
+        if(!strcmp(ddtype, "float")){
+            val2f = atof(val);
+            float val1 = val1f+val2f;
+            sprintf($$, "%f", val1);
+            sprintf(val, "%f", val1);
+            strcpy(ddtype, "float");
+        }
+        else if(!strcmp(ddtype, "int")){
+            val2i = atoi(val);
+            int val1 = val1i+val2i;
+            sprintf($$, "%d", val1);
+            sprintf(val, "%d", val1);
+            strcpy(ddtype, "int");
+        }
+    }
+
     
     codegen();
 }
-|E {} T_SUB {push("-");} T {
-    int val = atoi($1) - atoi($3);
-    sprintf($$, "%d", val);
+|E {if(!strcmp(ddtype, "float")){flag = 1; val1f = atof(val);} else{val1i = atoi(val);}} T_SUB {push("-");} T {
+    if(flag){
+        val2f = atof(val);
+        float val1 = val1f-val2f;
+        sprintf($$, "%f", val1);
+        sprintf(val, "%f", val1);
+        flag = 0;
+        strcpy(ddtype, "float");
+    }
+    else{
+        if(!strcmp(ddtype, "float")){
+            val2f = atof(val);
+            float val1 = val1f-val2f;
+            sprintf($$, "%f", val1);
+            sprintf(val, "%f", val1);
+            strcpy(ddtype, "float");
+        }
+        else if(!strcmp(ddtype, "int")){
+            val2i = atoi(val);
+            int val1 = val1i-val2i;
+            sprintf($$, "%d", val1);
+            sprintf(val, "%d", val1);
+            strcpy(ddtype, "int");
+        }
+    }
+
     codegen();
 }
 |T {$$ = $1;}
 ;
 
-T: T {} T_MUL {push("*");} F {
-    int val = atoi($1) * atoi($3);
-    sprintf($$, "%d", val);
+T: T {if(!strcmp(ddtype, "float")){flag = 1; val1f = atof(val);} else{val1i = atoi(val);}} T_MUL {push("*");} F {
+    if(flag){
+        val2f = atof(val);
+        float val1 = val1f*val2f;
+        sprintf($$, "%f", val1);
+        sprintf(val, "%f", val1);
+        flag = 0;
+        strcpy(ddtype, "float");
+    }
+    else{
+        if(!strcmp(ddtype, "float")){
+            val2f = atof(val);
+            float val1 = val1f*val2f;
+            sprintf($$, "%f", val1);
+            sprintf(val, "%f", val1);
+            strcpy(ddtype, "float");
+        }
+        else if(!strcmp(ddtype, "int")){
+            val2i = atoi(val);
+            int val1 = val1i*val2i;
+            sprintf($$, "%d", val1);
+            sprintf(val, "%d", val1);
+            strcpy(ddtype, "int");
+        }
+    }
     codegen();
 }
-|T {} T_DIV {push("/");} F {
-    int val = atoi($1) / atoi($3);
-    sprintf($$, "%d", val);
+|T {if(!strcmp(ddtype, "float")){flag = 1; val1f = atof(val);} else{val1i = atoi(val);}} T_DIV {push("/");} F {
+
+    if(flag){
+        val2f = atof(val);
+        float val1 = val1f/val2f;
+        sprintf($$, "%f", val1);
+        sprintf(val, "%f", val1);
+        flag = 0;
+        strcpy(ddtype, "float");
+    }
+    else{
+        if(!strcmp(ddtype, "float")){
+            val2f = atof(val);
+            float val1 = val1f/val2f;
+            sprintf($$, "%f", val1);
+            sprintf(val, "%f", val1);
+            strcpy(ddtype, "float");
+        }
+        else if(!strcmp(ddtype, "int")){
+            val2i = atoi(val);
+            int val1 = val1i/val2i;
+            sprintf($$, "%d", val1);
+            sprintf(val, "%d", val1);
+            strcpy(ddtype, "int");
+        }
+    }
+    
     codegen();
 }
 |F {$$ = $1;}
@@ -338,9 +508,25 @@ F: T_ID {
         }
         push($1);
         int idx = find(scope, $1);
-        sprintf($$, "%d", symTable[idx].value);
+        
+        if(!strcmp(symTable[idx].dtype, "float")){
+            sprintf($$, "%f", atof(symTable[idx].value));
+            sprintf(val, "%f", atof(symTable[idx].value));
+            strcpy(ddtype, "float");
+        }
+        else if(!strcmp(symTable[idx].dtype, "int")){
+            sprintf($$, "%d", atoi(symTable[idx].value));
+            sprintf(val, "%d", atoi(symTable[idx].value));
+            strcpy(ddtype, "int");
+        }
       }
-|T_NUM {strcpy(val, $1); $$ = $1;push($1);}
+|T_NUM {strcpy(val, $1); $$ = $1; push($1);
+        char *position_ptr = strchr(val, '.');
+        if(position_ptr != NULL)
+            strcpy(ddtype, "float");
+        else
+            strcpy(ddtype, "int");
+}
 | T_OB E T_CB {$$ = $2;}
 | BOOL {
         $$ = $1; push($1);
@@ -628,9 +814,9 @@ ELSEBODY: T_ELSE T_OFB STMT T_CFB
 |
 ;
 
-JUMPSTMT: T_RETURN T_ID T_Terminator
-| T_RETURN T_NUM T_Terminator
-| T_RETURN T_STRING T_Terminator
+JUMPSTMT: T_RETURN T_ID {push($2); codegen_return();} T_Terminator
+| T_RETURN T_NUM {push($2); codegen_return();} T_Terminator
+| T_RETURN T_STRING {push($2); codegen_return();} T_Terminator
 | T_RETURN T_Terminator
 | T_CONTINUE T_Terminator
 | T_BREAK T_Terminator
@@ -647,8 +833,19 @@ UNARYEXP: T_INC T_ID {
         push($2);
         codgen_un();
         int idx = find(scope, $2);
-        sprintf($$, "%d", ++symTable[idx].value);
-        update($2, atoi($$), scope);
+        
+        if(!symTable[idx].dtype, "float"){
+            float v = atof(symTable[idx].value);
+            ++v;
+            sprintf($$, "%f", v);
+        }    
+        else if(!strcmp(symTable[idx].dtype, "int")){
+            int v = atoi(symTable[idx].value);
+            ++v;
+            sprintf($$, "%d", v);
+        }
+
+        update($2, $$, scope);
     }
 | T_ID T_INC {
         if(find(scope, $1) == -1){
@@ -658,8 +855,19 @@ UNARYEXP: T_INC T_ID {
         push($2);
         codgen_un();
         int idx = find(scope, $1);
-        sprintf($$, "%d", symTable[idx].value++);
-        update($1, atoi($$), scope);
+
+        if(!strcmp(symTable[idx].dtype, "float")){
+            float v = atof(symTable[idx].value);
+            v++;
+            sprintf($$, "%f", v);
+        }
+        else if(!strcmp(symTable[idx].dtype, "int")){
+            int v = atoi(symTable[idx].value);
+            v++;
+            sprintf($$, "%d", v);
+        }
+        
+        update($1, $$, scope);
     } 
 | T_DEC T_ID {
         if(find(scope, $2) == -1){
@@ -669,8 +877,19 @@ UNARYEXP: T_INC T_ID {
         push($2);
         codgen_un();
         int idx = find(scope, $2);
-        sprintf($$, "%d", --symTable[idx].value);
-        update($2, atoi($$), scope);
+
+        if(!strcmp(symTable[idx].dtype, "float")){
+            float v = atof(symTable[idx].value);
+            --v;
+            sprintf($$, "%f", v);
+        }
+        else if(!strcmp(symTable[idx].dtype, "int")){
+            int v = atoi(symTable[idx].value);
+            --v;
+            sprintf($$, "%d", v);
+        }
+
+        update($2, $$, scope);
     }
 | T_ID T_DEC {
         if(find(scope, $1) == -1){
@@ -680,8 +899,19 @@ UNARYEXP: T_INC T_ID {
         push($2);
         codgen_un();
         int idx = find(scope, $1);
-        sprintf($$, "%d", symTable[idx].value--);
-        update($1, atoi($$), scope);
+        
+        if(!strcmp(symTable[idx].dtype, "float")){
+            float v = atof(symTable[idx].value);
+            v--;
+            sprintf($$, "%f", v);
+        }
+        else if(!strcmp(symTable[idx].dtype, "int")){
+            int v = atoi(symTable[idx].value);
+            v--;
+            sprintf($$, "%d", v);
+        }
+
+        update($1, $$, scope);
     }
 ;
 
@@ -732,6 +962,9 @@ int label[25];
 char i_[3]="00";
 char temp[2]="t";
 int paramCall = 0;
+char call[5] = "call";
+char param[6] = "param";
+
 
 
 
@@ -739,15 +972,24 @@ void push(char* val){
     strcpy(st[top++], val);
 }
 
+void codegen_return(){
+    printf("return %s\n", st[top-1]);
+    insert_quad("return",st[top-1],NULL,NULL);
+    top-=1;
+}
 
 void codegen_call(){
     printf("call(%s, %d)\n", st[top-1], paramCall);
+    char temp[100];
+    sprintf(temp, "%d", paramCall);
+    insert_quad("call",st[top-1],temp,NULL);
     paramCall = 0;
     top-=1;
 }
 
 void codegen_param(){
     printf("param %s\n", st[top-1]);
+    insert_quad(param,st[top-1],NULL,NULL);
     top-=1;
     paramCall += 1;
 }
@@ -757,7 +999,7 @@ void codegen()
 	strcpy(temp,"t");
 	strcat(temp,i_);
 	printf("%s = %s %s %s\n",temp,st[top-3],st[top-2],st[top-1]);
-    insert_quad(st[top-2][0],st[top-3],st[top-1],temp);
+    insert_quad(st[top-2],st[top-3],st[top-1],temp);
 
 	
     top-=2;
@@ -778,19 +1020,30 @@ void codgen_un()
       
     if((!strcmp(st[top - 2],"++")) || (!strcmp(st[top - 2],"--"))){
     printf(" %s = %s %c %d\n", temp, st[top-1], st[top-2][0], 1);
-    insert_quad(st[top-2][0],st[top-1],"1",temp);
-    insert_quad('=',temp,NULL,st[top-1]);
+
+    char *ptr = malloc(2*sizeof(char));
+    ptr[0] = st[top-2][0];
+    ptr[1] = '\0';
+
+    insert_quad(ptr,st[top-1],"1",temp);
+    insert_quad("=",temp,NULL,st[top-1]);
     printf("%s = %s\n", st[top - 1], temp);
 
+    free(ptr);
 
     }
     else if((!strcmp(st[top - 1],"++")) || (!strcmp(st[top - 1],"--"))){
     printf(" %s = %s %c %d\n", temp, st[top-2], st[top-1][0], 1);
-    insert_quad(st[top-1][0],st[top-2],"1",temp);
-    insert_quad('=',temp,NULL,st[top-2]);
+
+    char *ptr = malloc(2*sizeof(char));
+    ptr[0] = st[top-1][0];
+    ptr[1] = '\0';
+
+    insert_quad(ptr,st[top-2],"1",temp);
+    insert_quad("=",temp,NULL,st[top-2]);
     printf("%s = %s\n", st[top - 2], temp);
 
-
+    free(ptr);
     }
     else
         printf(" %s = %s%s\n", temp, st[top-2], st[top-1]);
@@ -808,8 +1061,13 @@ void codgen_un()
 //done
 void codegen_syns(){
   printf("%s %c %s %c %s\n", st[top-3], st[top-2][1], st[top-3], st[top-2][0], st[top - 1]);
-  insert_quad(st[top-2][0],st[top-3],st[top-1],st[top-3]);
-    
+
+  char *ptr = malloc(2*sizeof(char));
+  ptr[0] = st[top-2][0];
+  ptr[1] = '\0';
+  insert_quad(ptr,st[top-3],st[top-1],st[top-3]);
+
+  free(ptr);
   
   top = top - 2;
 }
@@ -817,7 +1075,7 @@ void codegen_syns(){
 
 void codegen_assign(){
   printf("%s = %s\n", st[top-2], st[top-1]);
-  insert_quad('=',st[top-1],NULL,st[top-2]);
+  insert_quad("=",st[top-1],NULL,st[top-2]);
   
 
   top = top - 2;
@@ -838,6 +1096,12 @@ void for1() //mainly for getting labels ready
 {
       label[ltop++] = ++lnum; // label after (for(int i = 0;)) i.e. after declaring i = 0; => i = 0; label1: .... [Most important: label for checking condition]
       printf("L%d : \n",label[ltop - 1]);
+      char lab[26] = "L";
+      char temp1[100];
+      sprintf(temp1, "%d", label[ltop - 1]);
+      strcat(lab, temp1);
+
+      insert_quad("Label",NULL,NULL,lab);
       label[ltop++] = ++lnum; //label for incrementing
       label[ltop++] = ++lnum; //label for body of for loop
       label[ltop++] = ++lnum; //label for statements outside for loop
@@ -848,9 +1112,21 @@ void for2() //ICG for condition check
 	strcpy(temp,"t");
 	strcat(temp,i_);	
     printf("%s = not %s %s %s\n",temp,st[top-3],st[top-2],st[top-1]);
+    char temp1[50] = "not ";
+    strcat(temp1, st[top-2]);
+    insert_quad(temp1,st[top-3],st[top-1],temp);
+
     top -= 2;
-	printf("if %s goto L%d\n",temp,label[ltop - 1]);
-	if(i_[1]!='9')
+	
+    printf("if %s goto L%d\n",temp,label[ltop - 1]);
+
+    char lab2[26] = "L";
+    char temp2[100];
+    sprintf(temp2, "%d", label[ltop - 1]);
+    strcat(lab2, temp2);
+    insert_quad("if",temp,NULL,temp2);
+	
+    if(i_[1]!='9')
 		i_[1]++;
 	else
 	{
@@ -865,14 +1141,36 @@ void for2() //ICG for condition check
 void for3() //incrementing and executing loop again
 {
   printf("goto L%d\n", label[ltop - 4]);
+  char lab[26] = "L";
+  char temp1[100];
+  sprintf(temp1, "%d", label[ltop - 4]);
+  strcat(lab, temp1);
+  insert_quad("goto",NULL,NULL,lab);
+  
   printf("L%d :\n", label[ltop - 3]);
+  char lab2[26] = "L";
+  char temp2[100];
+  sprintf(temp2, "%d", label[ltop - 3]);
+  strcat(lab2, temp2);
+  insert_quad("Label",NULL,NULL,lab2);
 }
 
 void for4() //go to autoincrement and print label after loop
 {
 	printf("goto L%d \n",label[ltop - 2]);
-	printf("L%d : \n",label[ltop - 1]);
-      ltop = ltop - 4;
+    char lab[26] = "L";
+    char temp1[100];
+    sprintf(temp1, "%d", label[ltop - 4]);
+    strcat(lab, temp1);
+    insert_quad("goto",NULL,NULL,lab);
+	
+    printf("L%d : \n",label[ltop - 1]);
+    char lab2[26] = "L";
+    char temp2[100];
+    sprintf(temp2, "%d", label[ltop - 3]);
+    strcat(lab2, temp2);
+
+    ltop = ltop - 4;
 }
 
 //if
@@ -882,8 +1180,18 @@ void if1()
  strcpy(temp,"t");
  strcat(temp,i_);
  printf("%s = not %s %s %s\n",temp,st[top-3],st[top-2],st[top-1]);
+ char temp1[50] = "not ";
+ strcat(temp1, st[top-2]);
+ insert_quad(temp1,st[top-3],st[top-1],temp);
  top -= 2;
+ 
  printf("if %s goto L%d\n",temp,lnum);
+ char lab2[26] = "L";
+ char temp2[100];
+ sprintf(temp2, "%d", lnum);
+ strcat(lab2, temp2);
+ insert_quad("if",temp,NULL,temp2);
+
  i_[0]++;
  label[++ltop]=lnum;
 }
@@ -893,8 +1201,20 @@ void if2()
 int x;
 lnum++;
 x=label[ltop--];
+
+char lab2[26] = "L";
+char temp2[100];
+sprintf(temp2, "%d", x);
+insert_quad("goto",NULL,NULL,temp2);
 printf("goto L%d\n",lnum);
+
 printf("L%d: \n",x);
+char lab[26] = "L";
+char temp1[100];
+sprintf(temp1, "%d", x);
+strcat(lab, temp1);
+
+insert_quad("Label",NULL,NULL,lab);
 label[++ltop]=lnum;
 }
 
@@ -904,6 +1224,13 @@ void if3()
 int y;
 y=label[ltop--];
 printf("L%d: \n",y);
+char lab[26] = "L";
+char temp1[100];
+sprintf(temp1, "%d", y);
+strcat(lab, temp1);
+
+insert_quad("Label",NULL,NULL,lab);
+
 }
 
 

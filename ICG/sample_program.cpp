@@ -5,7 +5,9 @@
 
 int main(){
 int a = 10;
-int b = 20;
+int b = 20 + 20;
+float z = 10.5 + 1;
+z++;
 a++;
 
 int c;
