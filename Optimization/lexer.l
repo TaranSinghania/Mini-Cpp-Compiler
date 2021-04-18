@@ -8,7 +8,7 @@
 
 typedef struct node{
     int scope;
-    int value;
+    char value[1000];
     char name[100];
     char dtype[50];
     int line_num;
@@ -24,7 +24,7 @@ char tdType[50];
 int insert(int* idx, int scope, char* dtype, char* val, int line_num);
 void displaySymTable();
 int find(int  scope, char *name);
-void update(char* name, int value, int scope);
+void update(char* name, char* value, int scope);
 void incrScope();
 void decrScope();
 
@@ -54,12 +54,14 @@ letter [a-zA-Z]
 "double" { strcpy(tdType, yytext); yylval = strdup(yytext); return T_DOUBLE; }
 "char" { strcpy(tdType, yytext); yylval = strdup(yytext); return T_CHAR;}
 "string" { strcpy(tdType, yytext); yylval = strdup(yytext); return T_STR; }
+"bool" { strcpy(tdType, yytext); yylval = strdup(yytext); return T_BOOL; }
 "void" { strcpy(tdType, yytext); yylval = strdup(yytext); return T_VOID; }
 "public:" { yylval = strdup(yytext); return T_PUBLIC; }
 "private:" {yylval = strdup(yytext); return T_PRIVATE; }
 "protected:" {  yylval = strdup(yytext); return T_PROTECTED; }
 "class" { yylval = strdup(yytext); return T_CLASS; }
-
+"true"  { yylval = strdup(yytext); return T_TRUE; }
+"false"  { yylval = strdup(yytext); return T_FALSE; }
 "," { return T_COMMA; }
 ";" {return T_Terminator; }
 
@@ -80,6 +82,7 @@ letter [a-zA-Z]
 {letter}({letter}|{digit})* { yylval = strdup(yytext); return T_ID; }
 [+-]?{digit}+(\.{digit}+)?(E[+-]?{digit}+)? { yylval = strdup(yytext); return T_NUM; }
 \".*\" {strcpy(tdType,yytext); return T_STRING;}
+\'.*\' {strcpy(tdType,yytext); return T_CHR;}
 
 "+" {  yylval = strdup(yytext); return T_ADD; }
 "-" {  yylval = strdup(yytext); return T_SUB; }
@@ -145,7 +148,7 @@ int insert(int* idx, int scope, char* dtype, char* name, int line_num){
     if(!present){
         symTable[*idx].scope = scope;
         symTable[*idx].line_num = line_num;
-        symTable[*idx].value = 0;
+        strcpy(symTable[*idx].value, "0");
         strcpy(symTable[*idx].name, name);
         strcpy(symTable[*idx].dtype, dtype);
         symTable[*idx].valid = scope;
@@ -162,16 +165,16 @@ void displaySymTable()
         printf("Token\t\tData type\tScope\t\tValue\t\tLine number\n");
         for(int i = 0; i < count; i++)
         {
-                printf("%s\t\t%s\t\t%d\t\t%d\t\t%d\n", symTable[i].name, symTable[i].dtype, symTable[i].scope, symTable[i].value, symTable[i].line_num);
+                printf("%s\t\t%s\t\t%d\t\t%s\t\t%d\n", symTable[i].name, symTable[i].dtype, symTable[i].scope, symTable[i].value, symTable[i].line_num);
         }
         printf("\n");
 }
 
-void update(char* name, int value, int scope){
+void update(char* name, char* value, int scope){
   for(int i = 0; i < count; i++)
   {
     if(!strcmp(symTable[i].name, name) && symTable[i].scope == scope && symTable[i].valid){
-        symTable[i].value = value;
+        strcpy(symTable[i].value,value);
     }
   }
 }
