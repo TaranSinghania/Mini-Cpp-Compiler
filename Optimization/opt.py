@@ -40,6 +40,11 @@ def printExpression(constantList, filepointer):
                 print(i[1], "=", i[3])
                 time.sleep(0.05)
                 filepointer.write("%s %s %s %s\n"%("ARR", i[0], "=", i[3]))
+        else:
+            if(i[1]!="NULL"):
+                filepointer.write("%s %s \n"%(i[0],i[1]))
+            else:
+                filepointer.write("%s\n"%(i[0]))
                 
 def existslabel(lines, i):
     if(i == 0):
@@ -256,7 +261,7 @@ def constantFolding(lines, blocks):
                     print(i)
                     constantList.append(i)
                 else:
-                    cond, arg1, gt, label = i.split();
+                    cond, arg1, gt, label = i.split()
                     print("IF", arg1, "GOTO", label)
                     time.sleep(0.05)
                     constantList.append(["IF", arg1, "GOTO", label])
@@ -312,8 +317,11 @@ def constantFolding(lines, blocks):
                     elif(arg2.isdigit() and (lhs[0]!='*' and arg1[0]!='*' and arg2[0]!='*')):
                     
                         if(arg1 in tempdict):
-                        
-                            result = eval(str(tempdict[arg1])+operator+arg2)
+                            #print(tempdict[arg1],operator,arg2,type(tempdict[arg1]),type(operator),type(arg2))
+                            arres=tempdict[arg1]
+                            if type(tempdict[arg1])!=type(operator):
+                                arres=str(tempdict[arg1])
+                            result = eval(arres+operator+arg2)
                             tempdict[lhs] = result
                             print("=",result,"NULL",lhs)
                             time.sleep(0.05)
@@ -329,6 +337,8 @@ def constantFolding(lines, blocks):
                         flag2=0
                         arg1Res = arg1
                         if(arg1 in tempdict and (lhs[0]!='*' and arg1[0]!='*' and arg2[0]!='*')):
+                            if type(tempdict[arg1])!=type(arg1):
+                                tempdict[arg1]=str(tempdict[arg1])
                             arg1Res = str(tempdict[arg1])
                             flag1 = 1
                         arg2Res = arg2
@@ -379,6 +389,14 @@ def constantFolding(lines, blocks):
                     time.sleep(0.05)
                     constantList.append(["GOTO", arg2, "NULL", "NULL"])
                     fullList.append(["GOTO", arg2, "NULL", "NULL"])
+                elif(arg1=='param'):
+                    print(i)
+                    constantList.append(["param", arg2, "NULL", "NULL"])
+                    fullList.append(["param", arg2, "NULL", "NULL"])
+                elif(arg2==')'):
+                    print(i)
+                    constantList.append([arg1+arg2,"NULL","NULL","NULL"])
+                    fullList.append([arg1+arg2,"NULL","NULL","NULL"])
                 else:
                     print("LABEL", arg1)
                     time.sleep(0.05)
@@ -392,19 +410,20 @@ def constantFolding(lines, blocks):
                 constantList.append([op1+op2, arg1, arg2, lhs])
                 fullList.append([op1+op2,arg1,arg2,lhs])
             else:
-                if(i.split()[0] == 'ARR'):
-                    print(i)
-                    constantList.append(i)
-                else:
-                    cond, arg1, gt, label = i.split();
-                    print("IF", arg1, "GOTO", label)
-                    time.sleep(0.05)
-                    constantList.append(["IF", arg1, "GOTO", label])
-                    fullList.append(["IF", arg1, "GOTO", label])
+                # if(i.split()[0] == 'ARR'):
+                #     print(i)
+                #     constantList.append(i)
+                # else:
+                cond, arg1, gt, label = i.split()
+                print("IF", arg1, "GOTO", label)
+                time.sleep(0.05)
+                constantList.append(["IF", arg1, "GOTO", label])
+                fullList.append(["IF", arg1, "GOTO", label])
         k+=1
     
     newlist = []
     for i in constantList:
+        print(i)
         if(i[3][0] == 't' and i[3][1:len(i[3])].isdigit()):
             continue
         else:
@@ -445,6 +464,16 @@ fout = open("Optim_ICG.txt", "w")
 lines = fin.readlines()
 topop=[]
 count=0
+for i in range(len(lines)):
+    if "Expression" in lines[i].split():
+        topop.append(i-count)
+        count+=1
+
+for i in topop:
+    lines.pop(i)
+
+topop=[]
+count=0
 
 for i in range(len(lines)-1):
     lines[i] = lines[i].strip()
@@ -468,9 +497,14 @@ for i in range(len(lines)-1):
         topop.append(i-count)
         count+=1
     if(len(lines[i].split())==1):
-        str = lines[i]
-        lines[i] = str[:-1]+' '+str[-1]
+        str1 = lines[i]
+        lines[i] = str1[:-1]+' '+str1[-1]
 
+for i in topop:
+    lines.pop(i)
+
+for i in lines:
+    print(i,len(i.split()))
 # # uncomment later .....dont delete this snippet
 # fin.seek(0)
 # for i in lines:
@@ -493,21 +527,21 @@ print("_____________________")
 print()
 lines = elimDeadCode(lines)
 printl(lines)
-# looplines = findLoopLines(lines)
-# loop = []
-# for i in range(len(looplines)):
-#     for j in range(looplines[i][0], looplines[i][1]+1):
-#         loop.append(j)
-# print("LOOP BLOCKS ARE",loop)
-# constantList, fullList = constantFolding(lines, loop)
-# print("\n")
-# print("__________________________")
-# print()
-# print("Constant Folded Expression")
-# print("__________________________")
-# print()
+looplines = findLoopLines(lines)
+loop = []
+for i in range(len(looplines)):
+    for j in range(looplines[i][0], looplines[i][1]+1):
+        loop.append(j)
+print("LOOP BLOCKS ARE",loop)
+constantList, fullList = constantFolding(lines, loop)
+print("\n")
+print("__________________________")
+print()
+print("Constant Folded Expression")
+print("__________________________")
+print()
 
-# printExpression(constantList, fout)
-# fin.close()
-# fout.close()
-# printl(constantList)
+printExpression(constantList, fout)
+fin.close()
+fout.close()
+printl(constantList)
