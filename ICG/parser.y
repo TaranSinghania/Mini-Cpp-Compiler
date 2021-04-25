@@ -1082,7 +1082,7 @@ void codegen_return(){
 }
 
 void codegen_call(){
-    printf("call(%s, %d)\n", st[top-1], paramCall);
+    printf("call(%s,%d)\n", st[top-1], paramCall);
     char temp[100];
     sprintf(temp, "%d", paramCall);
     insert_quad("call",st[top-1],temp,NULL);
