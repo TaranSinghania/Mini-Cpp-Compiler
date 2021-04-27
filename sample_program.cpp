@@ -3,32 +3,30 @@
 
 #include <iostream.h>
 
-int foo(int a){
-	return 10;
-}
-
-
 int main(){
-for(int i=0; i<10; i++){
-	int x = 10;
-}
-int a = -10.55;
-int b = 1;
-
-if(a == 0 && b != 5){
-	cout << "True" << endl;
-}
+int a = 10;
+int b = a + 50;
+float z = 10.5 + 1;
+z++;
+a++;
 
 
-if(b == 0){
-	cout << "False";
-}
-else{
-	cout << "True";
-}
+int y=100;
+int c;
+c = a + 50;
 
+int e = a + 100 * 100;
+
+foo(a,b,c);
+
+for(int i=0; i<100; i++){
+	int d = 12;
+}
 
 return 0;
 }
+
+
+
 
 
